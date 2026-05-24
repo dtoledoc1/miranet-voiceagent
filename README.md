@@ -110,12 +110,12 @@ Crea o edita el archivo `.env` en la raíz del proyecto para adecuar los accesos
 # Configuración de Base de Datos MySQL
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=tu_contraseña_root
+DB_USER=***
+DB_PASSWORD=***
 DB_NAME=miranet_voiceagent
 
 # Configuración de Ollama
-OLLAMA_BASE_URL=http://127.0.0.1:11434
+OLLAMA_BASE_URL=http://127.0.0.1:8000
 OLLAMA_MODEL=mistral
 
 # Configuración de Whisper
