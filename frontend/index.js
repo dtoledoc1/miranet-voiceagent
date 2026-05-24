@@ -7,6 +7,10 @@ let analyserNode = null;
 let isListening = false;
 let sessionID = '';
 
+// Web Speech API Recognition Variables
+let recognition = null;
+let transcribedText = '';
+
 // Canvas Visualizer Variables
 const canvas = document.getElementById('waveform-canvas');
 const ctx = canvas.getContext('2d');
@@ -23,7 +27,7 @@ const chatLog = document.getElementById('chat-log-container');
 const ttsToggle = document.getElementById('tts-toggle');
 const overlayText = document.getElementById('visualizer-overlay-text');
 
-// Metadata & Metrics Nodes
+// Metadata Nodes
 const metaWhisper = document.getElementById('meta-whisper');
 const metaOllama = document.getElementById('meta-ollama');
 const metaDB = document.getElementById('meta-db');
@@ -49,6 +53,40 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Connect to WebSocket Server
     connectWebSocket();
+
+    // Initialize Web Speech API Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'es-ES'; // Set Spanish recognition
+
+        recognition.onresult = (event) => {
+            let interimTranscript = "";
+            let finalTranscript = "";
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            transcribedText = finalTranscript || interimTranscript;
+            console.log(`Speech Recognition result: ${transcribedText}`);
+            if (transcribedText.trim()) {
+                overlayText.textContent = `Escuchado: "${transcribedText}"`;
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+        };
+    } else {
+        console.warn("Speech Recognition API is not supported in this browser.");
+    }
 
     // Setup Button Events
     micToggleBtn.addEventListener('click', toggleListening);
@@ -310,6 +348,12 @@ async function startAudioCapture() {
         overlayText.textContent = "Escuchando... Habla ahora.";
         overlayText.style.color = "var(--primary-color)";
         
+        if (recognition) {
+            transcribedText = "";
+            recognition.start();
+            console.log("Speech recognition started.");
+        }
+
         return true;
     } catch (err) {
         console.error('Failed to access microphone:', err);
@@ -321,6 +365,11 @@ async function startAudioCapture() {
 function stopAudioCapture() {
     overlayText.textContent = "Voz capturada. Presione 'Procesar Voz' para responder.";
     overlayText.style.color = "var(--secondary-color)";
+
+    if (recognition) {
+        recognition.stop();
+        console.log("Speech recognition stopped manually.");
+    }
 
     if (scriptProcessor) {
         scriptProcessor.disconnect();
@@ -358,8 +407,17 @@ function triggerProcessing() {
         return;
     }
 
-    // Send end_of_speech trigger
-    socket.send(JSON.stringify({ type: 'end_of_speech' }));
+    if (transcribedText && transcribedText.trim() !== "") {
+        console.log(`Sending transcribed text directly: ${transcribedText}`);
+        socket.send(JSON.stringify({
+            type: 'user_transcription',
+            text: transcribedText
+        }));
+    } else {
+        console.log("No text transcribed, requesting simulated backend complaint...");
+        // Send end_of_speech trigger to get a simulated transcription
+        socket.send(JSON.stringify({ type: 'end_of_speech' }));
+    }
     
     // Add visual loading bubble
     renderAgentLoading();

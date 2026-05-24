@@ -162,6 +162,82 @@ class OrchestratorAgent:
             }
         }
 
+    async def process_text_segment(self, session_id: str, transcription: str) -> dict:
+        """
+        Process a text transcription sent directly from the client (browser speech recognition).
+        Bypasses local Whisper to save memory and CPU.
+        """
+        session = self.active_sessions.get(session_id)
+        if not session:
+            raise RuntimeError(f"Session {session_id} is not initialized.")
+
+        audio_bytes = bytes(session["audio_buffer"])
+        # Clear buffer
+        session["audio_buffer"] = bytearray()
+        
+        # Audio size is either the buffer size or default 16000 bytes
+        audio_size = len(audio_bytes) if audio_bytes else 16000
+        
+        # Increment sequence counter
+        session["sequence_counter"] += 1
+        sequence_num = session["sequence_counter"]
+
+        logger.info(f"Processing text segment for {session_id} (seq: {sequence_num}, text: '{transcription}')")
+
+        t_latency = 0
+        c_latency = 0
+
+        # Respond (Ollama or Hybrid Matcher)
+        result_json, r_latency = await self.responder.generate_response(
+            text=transcription,
+            history=session["history"]
+        )
+        
+        intent = result_json.get("nivel_asignado", "bajo")
+        sentiment = f"{result_json.get('diagnostico_causa_raiz', 'N/A')} ({result_json.get('porcentaje_confianza', '0%')})"
+        response = result_json.get("respuesta_cliente", "...")
+
+        # Update Session History
+        session["history"].append({"role": "user", "content": transcription})
+        session["history"].append({"role": "assistant", "content": response})
+
+        # Save to Database asynchronously
+        await db.log_voice_interaction(
+            session_id=session_id,
+            sequence_number=sequence_num,
+            audio_size_bytes=audio_size,
+            transcription=transcription,
+            classification_intent=intent,
+            classification_sentiment=sentiment,
+            response_text=response,
+            transcription_latency_ms=t_latency,
+            classification_latency_ms=c_latency,
+            response_latency_ms=r_latency
+        )
+
+        # Log current network summary stats to database
+        net_monitor: NetworkMonitorAgent = session["network_monitor"]
+        summary = net_monitor.get_summary()
+        await db.log_network_metrics(
+            session_id=session_id,
+            latency_ms=int(summary["avg_jitter_ms"]),
+            packet_loss_rate=summary["packet_loss_rate"],
+            jitter_ms=int(summary["avg_jitter_ms"]),
+            bandwidth_kbps=summary["avg_bandwidth_kbps"]
+        )
+
+        return {
+            "transcription": transcription,
+            "response": response,
+            "intent": intent,
+            "sentiment": sentiment,
+            "latencies": {
+                "transcription": t_latency,
+                "classification": c_latency,
+                "responder": r_latency
+            }
+        }
+
     async def end_session(self, session_id: str) -> dict:
         """Log final network diagnostics and release session context."""
         session = self.active_sessions.pop(session_id, None)

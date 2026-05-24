@@ -194,6 +194,23 @@ async def websocket_voice_endpoint(
                             "latencies": result["latencies"]
                         })
                         
+                    elif cmd_type == "user_transcription":
+                        transcription_text = control.get("text", "").strip()
+                        logger.info(f"Client sent direct transcription for {session_id}: '{transcription_text}'")
+                        
+                        # Process using the direct text route
+                        result = await orchestrator.process_text_segment(session_id, transcription_text)
+                        
+                        # Send result back to the user
+                        await websocket.send_json({
+                            "type": "agent_response",
+                            "transcription": result["transcription"],
+                            "response": result["response"],
+                            "intent": result["intent"],
+                            "sentiment": result["sentiment"],
+                            "latencies": result["latencies"]
+                        })
+                        
                     elif cmd_type == "reset":
                         # Empty current in-memory buffer for user
                         if session_id in orchestrator.active_sessions:
