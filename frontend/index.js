@@ -402,12 +402,12 @@ function stopAudioCapture() {
         if (transcribedText && transcribedText.trim() !== "") {
             overlayText.textContent = `Texto detectado: "${transcribedText}"`;
             overlayText.style.color = "var(--primary-color)";
-            console.log("Auto-triggering processing for voice input.");
-            triggerProcessing();
         } else {
-            overlayText.textContent = "No se detectó voz hablada. Escribe tu queja en la caja de abajo.";
-            overlayText.style.color = "var(--warning-color)";
+            overlayText.textContent = "Procesando audio en el servidor...";
+            overlayText.style.color = "var(--primary-color)";
         }
+        console.log("Auto-triggering processing for voice input.");
+        triggerProcessing();
     }, 500);
 
     if (scriptProcessor) {
