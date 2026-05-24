@@ -26,6 +26,8 @@ const reconnectBtn = document.getElementById('reconnect-server-btn');
 const chatLog = document.getElementById('chat-log-container');
 const ttsToggle = document.getElementById('tts-toggle');
 const overlayText = document.getElementById('visualizer-overlay-text');
+const textQueryInput = document.getElementById('text-query-input');
+const sendQueryBtn = document.getElementById('send-query-btn');
 
 // Metadata Nodes
 const metaWhisper = document.getElementById('meta-whisper');
@@ -74,15 +76,34 @@ window.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            transcribedText = finalTranscript || interimTranscript;
-            console.log(`Speech Recognition result: ${transcribedText}`);
-            if (transcribedText.trim()) {
+            // Accumulate transcribed text
+            const newText = finalTranscript || interimTranscript;
+            if (newText.trim()) {
+                transcribedText = newText;
+                console.log(`Speech Recognition result: ${transcribedText}`);
                 overlayText.textContent = `Escuchado: "${transcribedText}"`;
             }
         };
 
         recognition.onerror = (event) => {
             console.error("Speech recognition error:", event.error);
+            if (event.error === 'not-allowed') {
+                overlayText.textContent = "Error: Permiso de voz denegado.";
+                overlayText.style.color = "var(--danger-color)";
+            }
+        };
+
+        recognition.onend = () => {
+            console.log("Speech recognition ended.");
+            // If the user is still recording, auto-restart the recognition session
+            if (isListening) {
+                try {
+                    recognition.start();
+                    console.log("Speech recognition restarted automatically.");
+                } catch (e) {
+                    console.warn("Failed to restart speech recognition:", e);
+                }
+            }
         };
     } else {
         console.warn("Speech Recognition API is not supported in this browser.");
@@ -94,6 +115,14 @@ window.addEventListener('DOMContentLoaded', () => {
     reconnectBtn.addEventListener('click', () => {
         if (socket) socket.close();
         connectWebSocket();
+    });
+
+    // Setup Text Input Events
+    sendQueryBtn.addEventListener('click', sendTextInput);
+    textQueryInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            sendTextInput();
+        }
     });
 });
 
@@ -535,4 +564,27 @@ function drawWaveform() {
         }
         ctx.stroke();
     }
+}
+
+function sendTextInput() {
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+        alert('El servidor está desconectado.');
+        return;
+    }
+
+    const text = textQueryInput.value.trim();
+    if (!text) return;
+
+    // Clear input
+    textQueryInput.value = "";
+
+    console.log(`Sending typed text directly: ${text}`);
+    
+    // Add visual loading bubble
+    renderAgentLoading();
+    
+    socket.send(JSON.stringify({
+        type: 'user_transcription',
+        text: text
+    }));
 }
