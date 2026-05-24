@@ -78,23 +78,27 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Serve static files from the D:\miranet-voiceagent\frontend directory
-app.mount("/static", StaticFiles(directory="D:/miranet-voiceagent/frontend"), name="static")
+# Resolve dynamic path to frontend directory (cross-platform compatible)
+BASE_DIR = pathlib.Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+
+# Serve static files from the frontend directory
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 @app.get("/")
 async def get_index():
     """Serves the main frontend page."""
-    return FileResponse("D:/miranet-voiceagent/frontend/index.html")
+    return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 @app.get("/index.css")
 async def get_css():
     """Serve CSS directly for relative paths."""
-    return FileResponse("D:/miranet-voiceagent/frontend/index.css")
+    return FileResponse(str(FRONTEND_DIR / "index.css"))
 
 @app.get("/index.js")
 async def get_js():
     """Serve JS directly for relative paths."""
-    return FileResponse("D:/miranet-voiceagent/frontend/index.js")
+    return FileResponse(str(FRONTEND_DIR / "index.js"))
 
 
 @app.get("/health", tags=["System"])
