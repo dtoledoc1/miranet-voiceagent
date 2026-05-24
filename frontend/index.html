@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Miranet VoiceAgent - Interfaz de voz interactiva en tiempo real utilizando inteligencia artificial local.">
+    <title>Miranet VoiceAgent - Panel de Voz en Tiempo Real</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <header class="app-header">
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <h1>Miranet VoiceAgent</h1>
+        </div>
+        <div class="connection-status-badge" id="status-indicator">
+            <span class="status-dot"></span>
+            <span id="status-text">Desconectado</span>
+        </div>
+    </header>
+
+    <main class="app-container">
+        <!-- Panel Izquierdo: Interacción y Voz -->
+        <section class="panel-left" aria-label="Consola de Voz">
+            <div class="card glass-card visualizer-card">
+                <div class="waveform-container">
+                    <canvas id="waveform-canvas"></canvas>
+                    <div class="waveform-overlay" id="visualizer-overlay-text">
+                        Presiona "Iniciar Micrófono" para hablar
+                    </div>
+                </div>
+
+                <div class="controls-container">
+                    <button id="mic-toggle-btn" class="btn btn-primary btn-round" aria-label="Alternar micrófono">
+                        <span class="btn-icon">🎤</span>
+                        <span class="btn-label" id="mic-btn-label">Iniciar Micrófono</span>
+                    </button>
+
+                    <button id="speech-trigger-btn" class="btn btn-secondary disabled" disabled aria-label="Enviar audio para procesar">
+                        <span class="btn-icon">⚡</span>
+                        <span class="btn-label">Procesar Voz</span>
+                    </button>
+
+                    <div class="setting-row">
+                        <label class="switch-container" for="tts-toggle">
+                            <input type="checkbox" id="tts-toggle" checked>
+                            <span class="switch-slider"></span>
+                        </label>
+                        <span class="label-text">Sintetizador de Voz (TTS)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card glass-card chat-card">
+                <h2>Historial de Conversación</h2>
+                <div class="chat-log" id="chat-log-container">
+                    <div class="chat-message system-msg">
+                        <div class="msg-bubble">
+                            ¡Bienvenido a Miranet VoiceAgent! Conéctate al servidor local para iniciar la conversación de voz.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Panel Derecho: Métricas de Red y Diagnóstico -->
+        <section class="panel-right" aria-label="Panel de Métricas y Diagnósticos">
+            <div class="card glass-card metrics-card">
+                <h2>Diagnósticos en Tiempo Real</h2>
+                
+                <div class="metrics-grid">
+                    <div class="metric-box">
+                        <div class="metric-title">Latencia RTT</div>
+                        <div class="metric-value" id="val-latency">-- <span class="unit">ms</span></div>
+                    </div>
+                    
+                    <div class="metric-box">
+                        <div class="metric-title">Jitter</div>
+                        <div class="metric-value" id="val-jitter">-- <span class="unit">ms</span></div>
+                    </div>
+
+                    <div class="metric-box">
+                        <div class="metric-title">Pérdida de Paquetes</div>
+                        <div class="metric-value" id="val-loss">-- <span class="unit">%</span></div>
+                    </div>
+
+                    <div class="metric-box">
+                        <div class="metric-title">Ancho de Banda</div>
+                        <div class="metric-value" id="val-bandwidth">-- <span class="unit">kbps</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card glass-card status-card">
+                <h2>Configuración Local</h2>
+                <div class="metadata-list">
+                    <div class="metadata-row">
+                        <span class="meta-label">Modelo Whisper</span>
+                        <span class="meta-val" id="meta-whisper">Cargando...</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="meta-label">Modelo Ollama</span>
+                        <span class="meta-val" id="meta-ollama">Cargando...</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="meta-label">ID de Sesión</span>
+                        <span class="meta-val code-text" id="meta-session">--</span>
+                    </div>
+                    <div class="metadata-row">
+                        <span class="meta-label">Estado Base de Datos</span>
+                        <span class="meta-val" id="meta-db">Desconectado</span>
+                    </div>
+                </div>
+                <button id="reconnect-server-btn" class="btn btn-outline" aria-label="Reconectar servidor">
+                    Reconectar Servidor
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <p>&copy; 2026 Miranet VoiceAgent System. Desarrollado con FastAPI, OpenAI Whisper y Ollama.</p>
+    </footer>
+
+    <!-- Custom Javascript Client -->
+    <script src="index.js"></script>
+</body>
+</html>
