@@ -115,16 +115,19 @@ class ResponderAgent:
             
             response_data = response.json()
             response_text = response_data.get("message", {}).get("content", "").strip()
-            
-            # Parse response
             structured_data = json.loads(response_text)
             
-            # Clean and ensure default keys are present
+            # Clean brackets [ ] from output strings and ensure default keys are present
+            def clean_str(val):
+                if isinstance(val, str):
+                    return val.replace("[", "").replace("]", "").strip()
+                return str(val)
+
             result = {
-                "nivel_asignado": structured_data.get("nivel_asignado", "bajo").lower(),
-                "diagnostico_causa_raiz": structured_data.get("diagnostico_causa_raiz", "Diagnóstico genérico"),
-                "porcentaje_confianza": structured_data.get("porcentaje_confianza", "50%"),
-                "respuesta_cliente": structured_data.get("respuesta_cliente", "Entendido. ¿Me das más detalles?")
+                "nivel_asignado": clean_str(structured_data.get("nivel_asignado", "bajo")).lower(),
+                "diagnostico_causa_raiz": clean_str(structured_data.get("diagnostico_causa_raiz", "Diagnóstico genérico")),
+                "porcentaje_confianza": clean_str(structured_data.get("porcentaje_confianza", "50%")),
+                "respuesta_cliente": clean_str(structured_data.get("respuesta_cliente", "Entendido. ¿Me das más detalles?"))
             }
             
             latency_ms = int((time.perf_counter() - start_time) * 1000)
@@ -146,45 +149,69 @@ class ResponderAgent:
                     "porcentaje_confianza": "100%",
                     "respuesta_cliente": "Estimado usuario, registramos una avería masiva en su distrito. Ya estamos trabajando para restablecer el servicio."
                 }
-            # Case 1: Lento (Medium)
-            elif "lento" in lower_text or "lentitud" in lower_text or "demora" in lower_text:
+            # Greetings
+            elif any(w in lower_text for w in ["hola", "buenas", "buen día", "buenos días", "buenas tardes", "buenas noches", "qué tal"]):
                 result = {
-                    "nivel_asignado": "medio",
-                    "diagnostico_causa_raiz": "Saturación de enlace en Nodo",
-                    "porcentaje_confianza": "90%",
-                    "respuesta_cliente": "Detectamos saturación en su nodo de conexión. Ya estamos trabajando para solucionarlo de inmediato."
+                    "nivel_asignado": "bajo",
+                    "diagnostico_causa_raiz": "Saludo inicial del cliente",
+                    "porcentaje_confianza": "100%",
+                    "respuesta_cliente": "Hola, bienvenido al asistente virtual de Miranet. ¿En qué puedo ayudarte hoy?"
                 }
-            # Case 2: Caída masiva / vecinos (Critical)
-            elif "vecinos" in lower_text or "masivo" in lower_text or "zona" in lower_text or "toda la cuadra" in lower_text:
+            # Thank yous and Goodbyes
+            elif any(w in lower_text for w in ["gracias", "adiós", "chao", "hasta luego", "excelente", "perfecto", "ok", "de acuerdo"]):
                 result = {
-                    "nivel_asignado": "critico",
-                    "diagnostico_causa_raiz": "Falla masiva en la zona",
-                    "porcentaje_confianza": "95%",
-                    "respuesta_cliente": "Estimado cliente, detectamos una avería masiva en su sector. Nuestro equipo técnico ya va en camino."
+                    "nivel_asignado": "bajo",
+                    "diagnostico_causa_raiz": "Cierre de conversación o agradecimiento",
+                    "porcentaje_confianza": "100%",
+                    "respuesta_cliente": "Perfecto. Muchas gracias por comunicarte con Miranet. Si tienes otra consulta, aquí estaré. ¡Que tengas un gran día!"
                 }
-            # Case 3: Consulta general / Recibo (Low)
-            elif "recibo" in lower_text or "pago" in lower_text or "consulta" in lower_text or "duda" in lower_text:
+            # Commercial/Billing queries
+            elif any(w in lower_text for w in ["saldo", "pagar", "recibo", "factura", "facturación", "costo", "deuda", "boleta", "precio"]):
                 result = {
                     "nivel_asignado": "bajo",
                     "diagnostico_causa_raiz": "Consulta comercial de facturación",
                     "porcentaje_confianza": "100%",
                     "respuesta_cliente": "Entendido. Para temas de facturación y pagos, te derivaré de inmediato con un asesor comercial."
                 }
-            # Case 4: Luz roja / módem / no prende (High)
-            elif "módem" in lower_text or "modem" in lower_text or "luz roja" in lower_text or "router" in lower_text or "antena" in lower_text:
+            # Neighborhood or area-wide failure (Critical)
+            elif any(w in lower_text for w in ["vecinos", "masivo", "zona", "barrio", "cuadra", "distrito", "sector", "toda la zona"]):
+                result = {
+                    "nivel_asignado": "critico",
+                    "diagnostico_causa_raiz": "Falla masiva reportada por cliente",
+                    "porcentaje_confianza": "95%",
+                    "respuesta_cliente": "Estimado cliente, detectamos una avería masiva en su sector. Nuestro equipo técnico de red ya va en camino."
+                }
+            # Hardware/Physical signal issues (High)
+            elif any(w in lower_text for w in ["módem", "modem", "luz roja", "router", "antena", "cable", "fibra"]):
                 result = {
                     "nivel_asignado": "alto",
                     "diagnostico_causa_raiz": "Pérdida de sincronía del módem / señal física",
                     "porcentaje_confianza": "85%",
                     "respuesta_cliente": "La luz roja indica pérdida de señal física. Por favor, asegúrese de que el cable de fibra esté bien conectado."
                 }
-            # Case 5: Caída simple (High)
-            elif "cayó" in lower_text or "cayo" in lower_text or "se fue" in lower_text or "no tengo" in lower_text or "no hay" in lower_text or "perder" in lower_text:
+            # Slow speeds (Medium)
+            elif any(w in lower_text for w in ["lento", "lentitud", "demora", "velocidad", "cargar", "cargando"]):
+                result = {
+                    "nivel_asignado": "medio",
+                    "diagnostico_causa_raiz": "Saturación de enlace en Nodo",
+                    "porcentaje_confianza": "90%",
+                    "respuesta_cliente": "Detectamos una saturación temporal en su nodo de conexión. Procederemos a refrescar su señal de inmediato."
+                }
+            # Loss of service / Connection drops (High)
+            elif any(w in lower_text for w in ["cae", "cayó", "cayo", "se fue", "no tengo", "no hay", "funciona", "servicios", "fallando", "falla", "sin internet"]):
                 result = {
                     "nivel_asignado": "alto",
                     "diagnostico_causa_raiz": "Corte de fibra individual o router apagado",
                     "porcentaje_confianza": "80%",
-                    "respuesta_cliente": "He reportado una pérdida de señal en su línea. Vamos a realizar un reinicio de puerto de inmediato."
+                    "respuesta_cliente": "Lamento la pérdida del servicio. Estoy enviando un comando de reconexión a su módem para reactivarlo."
+                }
+            # Requesting human transfer
+            elif any(w in lower_text for w in ["asesor", "operador", "humano", "persona", "atención"]):
+                result = {
+                    "nivel_asignado": "medio",
+                    "diagnostico_causa_raiz": "Solicitud de transferencia a agente humano",
+                    "porcentaje_confianza": "100%",
+                    "respuesta_cliente": "Entendido. Lo transferiré de inmediato con un especialista de soporte de nuestro equipo humano."
                 }
             # Default
             else:

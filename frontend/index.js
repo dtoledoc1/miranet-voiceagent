@@ -309,8 +309,8 @@ function speakResponse(text) {
 async function toggleListening() {
     if (isListening) {
         // Stop recording
-        stopAudioCapture();
         isListening = false;
+        stopAudioCapture();
         updateUIState();
     } else {
         // Start recording
@@ -397,16 +397,18 @@ function stopAudioCapture() {
         console.log("Speech recognition stopped manually.");
     }
 
-    // Give Speech Recognition a small window to resolve the final text
+    // Give Speech Recognition a small window to resolve the final text and trigger processing automatically
     setTimeout(() => {
         if (transcribedText && transcribedText.trim() !== "") {
             overlayText.textContent = `Texto detectado: "${transcribedText}"`;
             overlayText.style.color = "var(--primary-color)";
+            console.log("Auto-triggering processing for voice input.");
+            triggerProcessing();
         } else {
             overlayText.textContent = "No se detectó voz hablada. Escribe tu queja en la caja de abajo.";
             overlayText.style.color = "var(--warning-color)";
         }
-    }, 300);
+    }, 500);
 
     if (scriptProcessor) {
         scriptProcessor.disconnect();
