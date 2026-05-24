@@ -104,7 +104,7 @@ async def get_js():
 @app.get("/health", tags=["System"])
 async def health_check():
     """Simple API status checker."""
-    db_status = "healthy" if db.pool is not None else "disconnected"
+    db_status = "healthy" if (db.pool is not None or db.use_supabase or db.use_sqlite) else "disconnected"
     return JSONResponse(
         content={
             "status": "online",
