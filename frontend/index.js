@@ -392,13 +392,21 @@ async function startAudioCapture() {
 }
 
 function stopAudioCapture() {
-    overlayText.textContent = "Voz capturada. Presione 'Procesar Voz' para responder.";
-    overlayText.style.color = "var(--secondary-color)";
-
     if (recognition) {
         recognition.stop();
         console.log("Speech recognition stopped manually.");
     }
+
+    // Give Speech Recognition a small window to resolve the final text
+    setTimeout(() => {
+        if (transcribedText && transcribedText.trim() !== "") {
+            overlayText.textContent = `Texto detectado: "${transcribedText}"`;
+            overlayText.style.color = "var(--primary-color)";
+        } else {
+            overlayText.textContent = "No se detectó voz hablada. Escribe tu queja en la caja de abajo.";
+            overlayText.style.color = "var(--warning-color)";
+        }
+    }, 300);
 
     if (scriptProcessor) {
         scriptProcessor.disconnect();
