@@ -100,6 +100,17 @@ async def get_js():
     """Serve JS directly for relative paths."""
     return FileResponse(str(FRONTEND_DIR / "index.js"))
 
+@app.get("/agent.html")
+async def get_agent_html():
+    """Serves the agent dashboard page."""
+    return FileResponse(str(FRONTEND_DIR / "agent.html"))
+
+@app.get("/agent")
+async def get_agent():
+    """Serves the agent dashboard page."""
+    return FileResponse(str(FRONTEND_DIR / "agent.html"))
+
+
 
 @app.get("/health", tags=["System"])
 async def health_check():
